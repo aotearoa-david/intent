@@ -12,6 +12,124 @@ By adopting intent-based leadership, every person declares what they intend to a
 
 An intent-driven web platform that turns chapter time into deliberate, outcome-focused collaboration — giving visibility to leaders, clarity to teams, and purpose to every session.
 
+## Getting started
+
+The repository now contains a full-stack hello world slice:
+
+* **Backend** — Go 1.22 HTTP service with structured logging and Postgres connectivity.
+* **API contract** — OpenAPI 3.1 definition describing the public surface.
+* **Frontend** — React + TypeScript single-page app that calls the backend greeting endpoint.
+* **Database** — PostgreSQL 16 via Docker Compose and a simple connectivity check (`SELECT 'Hello, Intent!'`).
+
+### Prerequisites
+
+* Go 1.22+
+* Node.js 18+
+* npm 9+
+* Docker (for local infrastructure)
+
+### Quick start (compose)
+
+```bash
+# build the frontend assets so the backend can serve them
+cd frontend
+npm install
+npm run build
+
+# in a new terminal, start postgres and the Go service
+cd ..
+docker compose up --build
+```
+
+The backend listens on <http://localhost:8080>. Vite’s dev server runs on <http://localhost:5173> if you prefer hot reloading (see below).
+
+### Run services without Docker
+
+```bash
+# Terminal 1: Postgres (ensure it matches the .env.example defaults)
+docker run --rm -p 5432:5432 -e POSTGRES_DB=intent -e POSTGRES_PASSWORD=postgres -e POSTGRES_USER=postgres postgres:16-alpine
+
+# Terminal 2: backend
+cd backend
+cp .env.example .env # optional helper for local tooling
+go run ./cmd/server
+
+# Terminal 3: frontend
+cd frontend
+npm install
+npm run dev
+```
+
+The Vite dev proxy forwards `/api` calls to the Go backend, keeping the SPA and API aligned.
+
+### Testing
+
+```bash
+cd backend
+go test ./...
+```
+
+## Interface details
+
+| Surface            | Path         | Method | Description                                                |
+| ------------------ | ------------ | ------ | ---------------------------------------------------------- |
+| REST API           | `/api/hello` | GET    | Returns `{"message": "Hello, Intent!"}` from Postgres.    |
+| Service health     | `/healthz`   | GET    | Plain text `ok` to integrate with probes.                  |
+| Static web content | `/`          | GET    | Serves the built React application from `frontend/dist`.   |
+
+The full API contract lives in [`api/openapi.yaml`](api/openapi.yaml) and will be the canonical artifact as additional endpoints are introduced.
+
+## Logging
+
+The backend uses Go’s `slog` JSON handler. Set `LOG_LEVEL` to `DEBUG`, `INFO`, `WARN`, or `ERROR` to adjust verbosity. Structured fields (`addr`, `signal`, `error`, etc.) are emitted to standard output for aggregation in the future platform observability stack.
+
+## Architecture (C4 model snippets)
+
+### System Context
+
+```mermaid
+C4Context
+    title Intent Platform - System Context
+    Person(member, "Chapter Member", "Declares intents and joins swarms")
+    Person(lead, "Chapter Lead", "Sets guardrails and reviews outcomes")
+    System_Boundary(platform, "Intent Platform") {
+        System(api, "Intent API", "Go HTTP service")
+        System_Software(frontend, "Intent Web App", "React + TypeScript SPA")
+        SystemDb(db, "Operational Postgres", "Hello world schema placeholder")
+    }
+    System_Ext(calendar, "Calendar Provider")
+    System_Ext(work, "Work Tracking")
+
+    Rel(member, frontend, "Declares intents, reviews swarms")
+    Rel(frontend, api, "REST + JSON")
+    Rel(api, db, "SQL over pgx")
+    Rel(lead, frontend, "Reviews goals, guardrails")
+    Rel(api, calendar, "Future integration")
+    Rel(api, work, "Future integration")
+```
+
+### Container Diagram
+
+```mermaid
+C4Container
+    title Intent Platform - Container View
+    Container_Boundary(c1, "Intent Platform") {
+        Container(api, "Go Backend", "Go 1.22", "Serves HTTP, handles logging, queries Postgres")
+        Container(frontend, "React SPA", "Vite + React 18", "Fetches API data and renders intents UI")
+        ContainerDb(db, "Postgres", "Docker Postgres 16", "Persists greetings today, core domain tomorrow")
+    }
+    Container_Ext(dev, "Developer Workstation", "Node + Go toolchains")
+
+    Rel(dev, frontend, "npm install / npm run dev")
+    Rel(dev, api, "go run / go test")
+    Rel(frontend, api, "Fetch /api/hello")
+    Rel(api, db, "pgx sql queries")
+```
+
+## Product backlog scaffolding
+
+The following EPIC, FEATURE, and USER STORY catalog outlines the evolution path for the platform. These narratives guide the future vertical slices that will build on top of the hello world stack above.
+
 # EPICs, FEATUREs and USER STORIES
 
 Background and assumptions
