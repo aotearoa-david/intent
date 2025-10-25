@@ -91,8 +91,10 @@ func setupDatabase(logger *slog.Logger) (*sql.DB, error) {
 
 func routes(logger *slog.Logger, db *sql.DB) http.Handler {
 	mux := http.NewServeMux()
-        mux.Handle("/api/hello", handlers.HelloHandler(logger, db))
-        mux.Handle("/api/intents", handlers.CreateIntentHandler(logger, db))
+	mux.Handle("/api/hello", handlers.HelloHandler(logger, db))
+	intentsHandler := handlers.IntentsHandler(logger, db)
+	mux.Handle("/api/intents", intentsHandler)
+	mux.Handle("/api/intents/", intentsHandler)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))

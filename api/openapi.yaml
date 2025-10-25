@@ -27,6 +27,66 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
   /api/intents:
+    get:
+      summary: List intents with filtering and pagination
+      operationId: listIntents
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number starting from 1.
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of items to return per page.
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: Case-insensitive search across statement, context, and expected outcome fields.
+        - in: query
+          name: collaborator
+          schema:
+            type: string
+          description: Filter intents by collaborator name (case-insensitive).
+        - in: query
+          name: createdAfter
+          schema:
+            type: string
+            format: date-time
+          description: Return intents created on or after this timestamp (RFC3339).
+        - in: query
+          name: createdBefore
+          schema:
+            type: string
+            format: date-time
+          description: Return intents created on or before this timestamp (RFC3339).
+      responses:
+        '200':
+          description: Intents matching the supplied filters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntentListResponse'
+        '400':
+          description: Invalid filter or pagination parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     post:
       summary: Submit a new intent for Chapter review
       operationId: createIntent
@@ -61,6 +121,99 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/intents/{id}:
+    get:
+      summary: Retrieve a single intent
+      operationId: getIntent
+      parameters:
+        - $ref: '#/components/parameters/IntentId'
+      responses:
+        '200':
+          description: Intent found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntentResponse'
+        '400':
+          description: Invalid identifier
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Intent not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      summary: Replace an intent
+      operationId: updateIntent
+      parameters:
+        - $ref: '#/components/parameters/IntentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIntentRequest'
+      responses:
+        '200':
+          description: Intent updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntentResponse'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Intent not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Delete an intent
+      operationId: deleteIntent
+      parameters:
+        - $ref: '#/components/parameters/IntentId'
+      responses:
+        '204':
+          description: Intent deleted
+        '400':
+          description: Invalid identifier
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Intent not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /healthz:
     get:
       summary: Health check endpoint
@@ -73,6 +226,15 @@ paths:
               schema:
                 type: string
 components:
+  parameters:
+    IntentId:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique identifier for the intent.
   schemas:
     HelloResponse:
       type: object
@@ -144,3 +306,35 @@ components:
         - expectedOutcome
         - collaborators
         - createdAt
+    PaginationMetadata:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        pageSize:
+          type: integer
+          example: 20
+        totalItems:
+          type: integer
+          example: 42
+        totalPages:
+          type: integer
+          example: 3
+      required:
+        - page
+        - pageSize
+        - totalItems
+        - totalPages
+    IntentListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntentResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationMetadata'
+      required:
+        - items
+        - pagination
