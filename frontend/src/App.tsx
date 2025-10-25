@@ -18,6 +18,8 @@ import {
 } from './api';
 import type { IntentResponse } from './types';
 import './app.css';
+import { formatDateInputValue, formatTimestamp, parseDateInputValue } from './date';
+import GoalsManager from './GoalsManager';
 
 type GreetingState = {
   status: 'loading' | 'success' | 'error';
@@ -64,43 +66,6 @@ const initialFilters: FiltersState = {
   createdBefore: '',
   page: 1,
   pageSize: 10,
-};
-
-const formatDateInputValue = (value: string): string => {
-  if (!value) {
-    return '';
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
-  const pad = (input: number) => input.toString().padStart(2, '0');
-  const year = date.getFullYear();
-  const month = pad(date.getMonth() + 1);
-  const day = pad(date.getDate());
-  const hours = pad(date.getHours());
-  const minutes = pad(date.getMinutes());
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
-
-const parseDateInputValue = (value: string): string => {
-  if (!value) {
-    return '';
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-  return date.toISOString();
-};
-
-const formatTimestamp = (value: string): string => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleString();
 };
 
 const App = () => {
@@ -549,6 +514,7 @@ const App = () => {
 
         {listState.status === 'loading' && intents.length > 0 && <p className="intent-list-loading-inline">Refreshing…</p>}
       </section>
+      <GoalsManager />
     </main>
   );
 };

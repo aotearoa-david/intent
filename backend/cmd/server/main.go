@@ -95,6 +95,9 @@ func routes(logger *slog.Logger, db *sql.DB) http.Handler {
 	intentsHandler := handlers.IntentsHandler(logger, db)
 	mux.Handle("/api/intents", intentsHandler)
 	mux.Handle("/api/intents/", intentsHandler)
+	goalsHandler := handlers.GoalsHandler(logger, db)
+	mux.Handle("/api/goals", goalsHandler)
+	mux.Handle("/api/goals/", goalsHandler)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
