@@ -1,0 +1,56 @@
+openapi: 3.1.0
+info:
+  title: Intent Platform API
+  version: 0.1.0
+  description: |
+    Initial hello world surface for the Intent platform. The service exposes a
+    greeting endpoint that proves connectivity to Postgres and demonstrates the
+    future shape of the platform APIs.
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/hello:
+    get:
+      summary: Retrieve a hello world greeting from Postgres
+      operationId: getHelloGreeting
+      responses:
+        '200':
+          description: Successful greeting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HelloResponse'
+        '500':
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /healthz:
+    get:
+      summary: Health check endpoint
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    HelloResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Hello, Intent!
+      required:
+        - message
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
