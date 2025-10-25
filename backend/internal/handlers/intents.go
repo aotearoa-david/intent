@@ -6,7 +6,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -28,13 +27,6 @@ type intentResponse struct {
 	ExpectedOutcome string   `json:"expectedOutcome"`
 	Collaborators   []string `json:"collaborators"`
 	CreatedAt       string   `json:"createdAt"`
-}
-
-type paginationResponse struct {
-	Page       int `json:"page"`
-	PageSize   int `json:"pageSize"`
-	TotalItems int `json:"totalItems"`
-	TotalPages int `json:"totalPages"`
 }
 
 type listIntentResponse struct {
@@ -137,12 +129,6 @@ func normalizeCollaborators(collaborators []string) []string {
 		cleaned = append(cleaned, trimmed)
 	}
 	return cleaned
-}
-
-func writeJSONError(w http.ResponseWriter, status int, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(map[string]string{"error": message})
 }
 
 func (h *intentsHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
@@ -356,19 +342,6 @@ func (h *intentsHandler) handleDelete(w http.ResponseWriter, r *http.Request, id
 func (h *intentsHandler) methodNotAllowed(w http.ResponseWriter, allowed ...string) {
 	w.Header().Set("Allow", strings.Join(allowed, ", "))
 	writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
-}
-
-func parsePositiveInt(value string, fallback int) int {
-	if strings.TrimSpace(value) == "" {
-		return fallback
-	}
-
-	parsed, err := strconv.Atoi(value)
-	if err != nil {
-		return fallback
-	}
-
-	return parsed
 }
 
 func toIntentResponse(intent database.Intent) intentResponse {

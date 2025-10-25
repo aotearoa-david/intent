@@ -214,6 +214,189 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/goals:
+    get:
+      summary: List goals with filtering and pagination
+      operationId: listGoals
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number starting from 1.
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of items to return per page.
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: Case-insensitive search across title, clarity statement, and success criteria fields.
+        - in: query
+          name: createdAfter
+          schema:
+            type: string
+            format: date-time
+          description: Return goals created on or after this timestamp (RFC3339).
+        - in: query
+          name: createdBefore
+          schema:
+            type: string
+            format: date-time
+          description: Return goals created on or before this timestamp (RFC3339).
+      responses:
+        '200':
+          description: Goals matching the supplied filters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoalListResponse'
+        '400':
+          description: Invalid filter or pagination parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Create a goal with clarity, constraints, and success criteria
+      operationId: createGoal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGoalRequest'
+      responses:
+        '201':
+          description: Goal created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoalResponse'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '405':
+          description: Method not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/goals/{id}:
+    get:
+      summary: Retrieve a single goal
+      operationId: getGoal
+      parameters:
+        - $ref: '#/components/parameters/GoalId'
+      responses:
+        '200':
+          description: Goal found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoalResponse'
+        '400':
+          description: Invalid identifier
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Goal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      summary: Replace a goal
+      operationId: updateGoal
+      parameters:
+        - $ref: '#/components/parameters/GoalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGoalRequest'
+      responses:
+        '200':
+          description: Goal updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoalResponse'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Goal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Delete a goal
+      operationId: deleteGoal
+      parameters:
+        - $ref: '#/components/parameters/GoalId'
+      responses:
+        '204':
+          description: Goal deleted
+        '400':
+          description: Invalid identifier
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Goal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /healthz:
     get:
       summary: Health check endpoint
@@ -235,6 +418,14 @@ components:
         type: string
         format: uuid
       description: Unique identifier for the intent.
+    GoalId:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique identifier for the goal.
   schemas:
     HelloResponse:
       type: object
@@ -333,6 +524,80 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/IntentResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationMetadata'
+      required:
+        - items
+        - pagination
+    CreateGoalRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Concise name that expresses the outcome the chapter is aiming for.
+          example: Accelerate Thursday release readiness
+        clarityStatement:
+          type: string
+          description: The narrative that explains why the goal matters now.
+          example: We keep scrambling Thursday morning because test evidence is fragmented.
+        constraints:
+          type: array
+          description: Guardrails or boundaries that must not be violated.
+          items:
+            type: string
+          example:
+            - Protect member focus time
+            - Do not increase deploy risk
+        successCriteria:
+          type: array
+          description: Observable signals that prove the goal was achieved.
+          items:
+            type: string
+          example:
+            - All squads publish readiness checklist by Wednesday
+            - Fewer than two manual rollback steps
+      required:
+        - title
+        - clarityStatement
+    GoalResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        clarityStatement:
+          type: string
+        constraints:
+          type: array
+          items:
+            type: string
+        successCriteria:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - clarityStatement
+        - constraints
+        - successCriteria
+        - createdAt
+        - updatedAt
+    GoalListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/GoalResponse'
         pagination:
           $ref: '#/components/schemas/PaginationMetadata'
       required:
