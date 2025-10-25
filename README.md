@@ -17,7 +17,7 @@ An intent-driven web platform that turns chapter time into deliberate, outcome-f
 The repository now contains a full-stack slice that captures intents end-to-end:
 
 * **Backend** — Go 1.22 HTTP service with structured logging, Postgres connectivity, and an intent creation endpoint.
-* **API contract** — OpenAPI 3.1 definition describing the public surface, including the `POST /api/intents` operation.
+* **API contract** — OpenAPI 3.1 definition describing the public surface, including CRUDL operations for intents.
 * **Frontend** — React + TypeScript single-page app with an intent composer form wired to the backend API.
 * **Database** — PostgreSQL 16 via Docker Compose with an `intents` table for storing submissions.
 
@@ -71,12 +71,16 @@ go test ./...
 
 ## Interface details
 
-| Surface            | Path           | Method | Description                                                                 |
-| ------------------ | -------------- | ------ | --------------------------------------------------------------------------- |
-| REST API           | `/api/hello`   | GET    | Returns `{\"message\": \"Hello, Intent!\"}` from Postgres.                   |
-| REST API           | `/api/intents` | POST   | Persists an intent with statement, context, expected outcome, and collaborators. |
-| Service health     | `/healthz`     | GET    | Plain text `ok` to integrate with probes.                                   |
-| Static web content | `/`            | GET    | Serves the built React application from `frontend/dist`.                    |
+| Surface            | Path                   | Method | Description                                                                 |
+| ------------------ | ---------------------- | ------ | --------------------------------------------------------------------------- |
+| REST API           | `/api/hello`           | GET    | Returns `{\"message\": \"Hello, Intent!\"}` from Postgres.                   |
+| REST API           | `/api/intents`         | POST   | Persists an intent with statement, context, expected outcome, and collaborators. |
+| REST API           | `/api/intents`         | GET    | Lists intents with pagination, text search, collaborator, and created-at filters. |
+| REST API           | `/api/intents/{id}`    | GET    | Retrieves a single intent by identifier.                                    |
+| REST API           | `/api/intents/{id}`    | PUT    | Replaces an existing intent.                                                |
+| REST API           | `/api/intents/{id}`    | DELETE | Deletes an intent.                                                          |
+| Service health     | `/healthz`             | GET    | Plain text `ok` to integrate with probes.                                   |
+| Static web content | `/`                    | GET    | Serves the built React application from `frontend/dist`.                    |
 
 Database migrations live in [`backend/internal/database/migrations`](backend/internal/database/migrations). Apply the latest migration to create the `intents` table:
 
@@ -128,7 +132,7 @@ C4Context
 C4Container
     title Intent Platform - Container View
     Container_Boundary(c1, "Intent Platform") {
-        Container(api, "Go Backend", "Go 1.22", "Serves HTTP, handles logging, persists intents to Postgres")
+        Container(api, "Go Backend", "Go 1.22", "Serves HTTP, handles logging, and provides CRUDL APIs for intents backed by Postgres")
         Container(frontend, "React SPA", "Vite + React 18", "Fetches API data, renders intents UI, and submits forms")
         ContainerDb(db, "Postgres", "Docker Postgres 16", "Stores intents (statement, context, expected outcome, collaborators)")
     }
@@ -136,7 +140,7 @@ C4Container
 
     Rel(dev, frontend, "npm install / npm run dev")
     Rel(dev, api, "go run / go test")
-    Rel(frontend, api, "Fetch /api/hello, POST /api/intents")
+    Rel(frontend, api, "Fetch /api/hello, CRUDL /api/intents")
     Rel(api, db, "pgx sql queries")
 ```
 
