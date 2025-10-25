@@ -112,7 +112,7 @@ C4Context
     Person(lead, "Chapter Lead", "Sets guardrails and reviews outcomes")
     System_Boundary(platform, "Intent Platform") {
         System(api, "Intent API", "Go HTTP service")
-        System_Software(frontend, "Intent Web App", "React + TypeScript SPA")
+        System(frontend, "Intent Web App", "React + TypeScript SPA")
         SystemDb(db, "Operational Postgres", "Stores intents for session alignment")
     }
     System_Ext(calendar, "Calendar Provider")
