@@ -11,3 +11,92 @@ body {
 a {
   color: inherit;
 }
+
+.intent-card {
+  width: min(720px, 100%);
+  padding: 2rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 20px 40px -18px rgba(30, 64, 175, 0.35);
+  display: grid;
+  gap: 1.5rem;
+}
+
+.intent-card header h2 {
+  margin: 0 0 0.5rem;
+}
+
+.intent-card header p {
+  margin: 0;
+  color: #4b5563;
+}
+
+.intent-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.intent-form label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.intent-form textarea,
+.intent-form input {
+  font: inherit;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+  resize: vertical;
+  min-height: 3.5rem;
+}
+
+.intent-form textarea:focus,
+.intent-form input:focus {
+  outline: 3px solid rgba(129, 140, 248, 0.45);
+  border-color: rgba(79, 70, 229, 0.65);
+}
+
+.intent-form button {
+  justify-self: start;
+  padding: 0.85rem 1.6rem;
+  border-radius: 9999px;
+  border: none;
+  background: linear-gradient(135deg, #6366f1, #14b8a6);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.intent-form button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 25px -12px rgba(79, 70, 229, 0.6);
+}
+
+.intent-form button:disabled {
+  cursor: progress;
+  opacity: 0.65;
+}
+
+.intent-alert {
+  border-radius: 0.9rem;
+  padding: 1rem 1.25rem;
+  display: grid;
+  gap: 0.35rem;
+  border: 1px solid transparent;
+}
+
+.intent-alert-success {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.intent-alert-error {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.4);
+}
