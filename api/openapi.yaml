@@ -26,6 +26,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/intents:
+    post:
+      summary: Submit a new intent for Chapter review
+      operationId: createIntent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIntentRequest'
+      responses:
+        '201':
+          description: Intent created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntentResponse'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '405':
+          description: Method not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /healthz:
     get:
       summary: Health check endpoint
@@ -54,3 +89,58 @@ components:
           type: string
       required:
         - error
+    CreateIntentRequest:
+      type: object
+      properties:
+        statement:
+          type: string
+          description: The "I intend to" statement in the engineer's own words.
+          example: I intend to improve deployment visibility for the Thursday release.
+        context:
+          type: string
+          description: Relevant background that explains why the intent matters now.
+          example: Our incident review highlighted missing deployment dashboards.
+        expectedOutcome:
+          type: string
+          description: What success looks like when the intent is fulfilled.
+          example: A published runbook and Grafana view shared with the chapter.
+        collaborators:
+          type: array
+          description: Engineers or roles needed to fulfil the intent.
+          items:
+            type: string
+          example:
+            - SRE Guild
+            - Frontend pairing partner
+      required:
+        - statement
+        - context
+        - expectedOutcome
+    IntentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the newly created intent.
+        statement:
+          type: string
+        context:
+          type: string
+        expectedOutcome:
+          type: string
+        collaborators:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp indicating when the intent was recorded.
+      required:
+        - id
+        - statement
+        - context
+        - expectedOutcome
+        - collaborators
+        - createdAt

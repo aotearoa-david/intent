@@ -14,12 +14,12 @@ An intent-driven web platform that turns chapter time into deliberate, outcome-f
 
 ## Getting started
 
-The repository now contains a full-stack hello world slice:
+The repository now contains a full-stack slice that captures intents end-to-end:
 
-* **Backend** — Go 1.22 HTTP service with structured logging and Postgres connectivity.
-* **API contract** — OpenAPI 3.1 definition describing the public surface.
-* **Frontend** — React + TypeScript single-page app that calls the backend greeting endpoint.
-* **Database** — PostgreSQL 16 via Docker Compose and a simple connectivity check (`SELECT 'Hello, Intent!'`).
+* **Backend** — Go 1.22 HTTP service with structured logging, Postgres connectivity, and an intent creation endpoint.
+* **API contract** — OpenAPI 3.1 definition describing the public surface, including the `POST /api/intents` operation.
+* **Frontend** — React + TypeScript single-page app with an intent composer form wired to the backend API.
+* **Database** — PostgreSQL 16 via Docker Compose with an `intents` table for storing submissions.
 
 ### Prerequisites
 
@@ -71,11 +71,25 @@ go test ./...
 
 ## Interface details
 
-| Surface            | Path         | Method | Description                                                |
-| ------------------ | ------------ | ------ | ---------------------------------------------------------- |
-| REST API           | `/api/hello` | GET    | Returns `{"message": "Hello, Intent!"}` from Postgres.    |
-| Service health     | `/healthz`   | GET    | Plain text `ok` to integrate with probes.                  |
-| Static web content | `/`          | GET    | Serves the built React application from `frontend/dist`.   |
+| Surface            | Path           | Method | Description                                                                 |
+| ------------------ | -------------- | ------ | --------------------------------------------------------------------------- |
+| REST API           | `/api/hello`   | GET    | Returns `{\"message\": \"Hello, Intent!\"}` from Postgres.                   |
+| REST API           | `/api/intents` | POST   | Persists an intent with statement, context, expected outcome, and collaborators. |
+| Service health     | `/healthz`     | GET    | Plain text `ok` to integrate with probes.                                   |
+| Static web content | `/`            | GET    | Serves the built React application from `frontend/dist`.                    |
+
+Database migrations live in [`backend/internal/database/migrations`](backend/internal/database/migrations). Apply the latest migration to create the `intents` table:
+
+```sql
+CREATE TABLE IF NOT EXISTS intents (
+    id UUID PRIMARY KEY,
+    statement TEXT NOT NULL,
+    context TEXT NOT NULL,
+    expected_outcome TEXT NOT NULL,
+    collaborators JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL
+);
+```
 
 The full API contract lives in [`api/openapi.yaml`](api/openapi.yaml) and will be the canonical artifact as additional endpoints are introduced.
 
@@ -95,7 +109,7 @@ C4Context
     System_Boundary(platform, "Intent Platform") {
         System(api, "Intent API", "Go HTTP service")
         System_Software(frontend, "Intent Web App", "React + TypeScript SPA")
-        SystemDb(db, "Operational Postgres", "Hello world schema placeholder")
+        SystemDb(db, "Operational Postgres", "Stores intents for session alignment")
     }
     System_Ext(calendar, "Calendar Provider")
     System_Ext(work, "Work Tracking")
@@ -114,15 +128,15 @@ C4Context
 C4Container
     title Intent Platform - Container View
     Container_Boundary(c1, "Intent Platform") {
-        Container(api, "Go Backend", "Go 1.22", "Serves HTTP, handles logging, queries Postgres")
-        Container(frontend, "React SPA", "Vite + React 18", "Fetches API data and renders intents UI")
-        ContainerDb(db, "Postgres", "Docker Postgres 16", "Persists greetings today, core domain tomorrow")
+        Container(api, "Go Backend", "Go 1.22", "Serves HTTP, handles logging, persists intents to Postgres")
+        Container(frontend, "React SPA", "Vite + React 18", "Fetches API data, renders intents UI, and submits forms")
+        ContainerDb(db, "Postgres", "Docker Postgres 16", "Stores intents (statement, context, expected outcome, collaborators)")
     }
     Container_Ext(dev, "Developer Workstation", "Node + Go toolchains")
 
     Rel(dev, frontend, "npm install / npm run dev")
     Rel(dev, api, "go run / go test")
-    Rel(frontend, api, "Fetch /api/hello")
+    Rel(frontend, api, "Fetch /api/hello, POST /api/intents")
     Rel(api, db, "pgx sql queries")
 ```
 
