@@ -6,3 +6,13 @@ export type IntentResponse = {
   collaborators: string[];
   createdAt: string;
 };
+
+export type GoalResponse = {
+  id: string;
+  title: string;
+  clarityStatement: string;
+  constraints: string[];
+  successCriteria: string[];
+  createdAt: string;
+  updatedAt: string;
+};

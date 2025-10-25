@@ -18,7 +18,7 @@ The repository now contains a full-stack slice that captures intents end-to-end:
 
 * **Backend** — Go 1.22 HTTP service with structured logging, Postgres connectivity, and CRUDL endpoints for intents and goals.
 * **API contract** — OpenAPI 3.1 definition describing the public surface, including CRUDL operations for intents.
-* **Frontend** — React + TypeScript single-page app with an intent composer form wired to the backend API.
+* **Frontend** — React + TypeScript single-page app with intent capture and goal management experiences wired to the backend API.
 * **Database** — PostgreSQL 16 via Docker Compose with an `intents` table for storing submissions.
 
 ### Prerequisites
@@ -150,14 +150,14 @@ C4Container
     title Intent Platform - Container View
     Container_Boundary(c1, "Intent Platform") {
         Container(api, "Go Backend", "Go 1.22", "Serves HTTP, handles logging, and provides CRUDL APIs for intents and goals backed by Postgres")
-        Container(frontend, "React SPA", "Vite + React 18", "Fetches API data, renders intents UI, and submits forms")
+        Container(frontend, "React SPA", "Vite + React 18", "Fetches API data, renders intents and goals UI, and submits forms")
         ContainerDb(db, "Postgres", "Docker Postgres 16", "Stores intents (statement, context, expected outcome, collaborators) and goals (clarity, constraints, success criteria)")
     }
     Container_Ext(dev, "Developer Workstation", "Node + Go toolchains")
 
     Rel(dev, frontend, "npm install / npm run dev")
     Rel(dev, api, "go run / go test")
-    Rel(frontend, api, "Fetch /api/hello, CRUDL /api/intents")
+    Rel(frontend, api, "Fetch /api/hello, CRUDL /api/intents and /api/goals")
     Rel(api, db, "pgx sql queries")
 ```
 
