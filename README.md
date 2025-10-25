@@ -16,7 +16,7 @@ An intent-driven web platform that turns chapter time into deliberate, outcome-f
 
 The repository now contains a full-stack slice that captures intents end-to-end:
 
-* **Backend** — Go 1.22 HTTP service with structured logging, Postgres connectivity, and an intent creation endpoint.
+* **Backend** — Go 1.22 HTTP service with structured logging, Postgres connectivity, and CRUDL endpoints for intents and goals.
 * **API contract** — OpenAPI 3.1 definition describing the public surface, including CRUDL operations for intents.
 * **Frontend** — React + TypeScript single-page app with an intent composer form wired to the backend API.
 * **Database** — PostgreSQL 16 via Docker Compose with an `intents` table for storing submissions.
@@ -71,18 +71,23 @@ go test ./...
 
 ## Interface details
 
-| Surface            | Path                   | Method | Description                                                                 |
-| ------------------ | ---------------------- | ------ | --------------------------------------------------------------------------- |
-| REST API           | `/api/hello`           | GET    | Returns `{\"message\": \"Hello, Intent!\"}` from Postgres.                   |
+| Surface            | Path                   | Method | Description |
+| ------------------ | ---------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| REST API           | `/api/hello`           | GET    | Returns `{\"message\": \"Hello, Intent!\"}` from Postgres. |
 | REST API           | `/api/intents`         | POST   | Persists an intent with statement, context, expected outcome, and collaborators. |
 | REST API           | `/api/intents`         | GET    | Lists intents with pagination, text search, collaborator, and created-at filters. |
-| REST API           | `/api/intents/{id}`    | GET    | Retrieves a single intent by identifier.                                    |
-| REST API           | `/api/intents/{id}`    | PUT    | Replaces an existing intent.                                                |
-| REST API           | `/api/intents/{id}`    | DELETE | Deletes an intent.                                                          |
-| Service health     | `/healthz`             | GET    | Plain text `ok` to integrate with probes.                                   |
-| Static web content | `/`                    | GET    | Serves the built React application from `frontend/dist`.                    |
+| REST API           | `/api/intents/{id}`    | GET    | Retrieves a single intent by identifier. |
+| REST API           | `/api/intents/{id}`    | PUT    | Replaces an existing intent. |
+| REST API           | `/api/intents/{id}`    | DELETE | Deletes an intent. |
+| REST API           | `/api/goals`           | POST   | Creates a goal with clarity statement, constraints, and success criteria. |
+| REST API           | `/api/goals`           | GET    | Lists goals with pagination plus text and created-at filters. |
+| REST API           | `/api/goals/{id}`      | GET    | Retrieves a single goal by identifier. |
+| REST API           | `/api/goals/{id}`      | PUT    | Replaces an existing goal. |
+| REST API           | `/api/goals/{id}`      | DELETE | Deletes a goal. |
+| Service health     | `/healthz`             | GET    | Plain text `ok` to integrate with probes. |
+| Static web content | `/`                    | GET    | Serves the built React application from `frontend/dist`. |
 
-Database migrations live in [`backend/internal/database/migrations`](backend/internal/database/migrations). Apply the latest migration to create the `intents` table:
+Database migrations live in [`backend/internal/database/migrations`](backend/internal/database/migrations). Apply the latest migrations to create the `intents` and `goals` tables:
 
 ```sql
 CREATE TABLE IF NOT EXISTS intents (
@@ -92,6 +97,18 @@ CREATE TABLE IF NOT EXISTS intents (
     expected_outcome TEXT NOT NULL,
     collaborators JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ NOT NULL
+);
+```
+
+```sql
+CREATE TABLE IF NOT EXISTS goals (
+    id UUID PRIMARY KEY,
+    title TEXT NOT NULL,
+    clarity_statement TEXT NOT NULL,
+    constraints JSONB NOT NULL DEFAULT '[]'::jsonb,
+    success_criteria JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL
 );
 ```
 
@@ -111,9 +128,9 @@ C4Context
     Person(member, "Chapter Member", "Declares intents and joins swarms")
     Person(lead, "Chapter Lead", "Sets guardrails and reviews outcomes")
     System_Boundary(platform, "Intent Platform") {
-        System(api, "Intent API", "Go HTTP service")
+        System(api, "Intent & Goal API", "Go HTTP service")
         System(frontend, "Intent Web App", "React + TypeScript SPA")
-        SystemDb(db, "Operational Postgres", "Stores intents for session alignment")
+        SystemDb(db, "Operational Postgres", "Stores intents and goals for session alignment")
     }
     System_Ext(calendar, "Calendar Provider")
     System_Ext(work, "Work Tracking")
@@ -132,9 +149,9 @@ C4Context
 C4Container
     title Intent Platform - Container View
     Container_Boundary(c1, "Intent Platform") {
-        Container(api, "Go Backend", "Go 1.22", "Serves HTTP, handles logging, and provides CRUDL APIs for intents backed by Postgres")
+        Container(api, "Go Backend", "Go 1.22", "Serves HTTP, handles logging, and provides CRUDL APIs for intents and goals backed by Postgres")
         Container(frontend, "React SPA", "Vite + React 18", "Fetches API data, renders intents UI, and submits forms")
-        ContainerDb(db, "Postgres", "Docker Postgres 16", "Stores intents (statement, context, expected outcome, collaborators)")
+        ContainerDb(db, "Postgres", "Docker Postgres 16", "Stores intents (statement, context, expected outcome, collaborators) and goals (clarity, constraints, success criteria)")
     }
     Container_Ext(dev, "Developer Workstation", "Node + Go toolchains")
 
