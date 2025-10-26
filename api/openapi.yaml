@@ -540,6 +540,22 @@ components:
           type: string
           description: The narrative that explains why the goal matters now.
           example: We keep scrambling Thursday morning because test evidence is fragmented.
+        guardrails:
+          type: array
+          description: Explicit boundaries the chapter must respect while pursuing the goal.
+          items:
+            type: string
+          example:
+            - Protect member focus time
+            - Keep deploy risk flat
+        decisionRights:
+          type: array
+          description: Decisions teams can make autonomously without additional approval.
+          items:
+            type: string
+          example:
+            - Teams may launch with feature flags
+            - Engineers pick collaboration tooling
         constraints:
           type: array
           description: Guardrails or boundaries that must not be violated.
@@ -569,6 +585,14 @@ components:
           type: string
         clarityStatement:
           type: string
+        guardrails:
+          type: array
+          items:
+            type: string
+        decisionRights:
+          type: array
+          items:
+            type: string
         constraints:
           type: array
           items:
@@ -587,6 +611,8 @@ components:
         - id
         - title
         - clarityStatement
+        - guardrails
+        - decisionRights
         - constraints
         - successCriteria
         - createdAt

@@ -136,6 +136,8 @@ export async function listIntents(params: ListIntentParams = {}): Promise<ListIn
 export type GoalPayload = {
   title: string;
   clarityStatement: string;
+  guardrails: string[];
+  decisionRights: string[];
   constraints: string[];
   successCriteria: string[];
 };

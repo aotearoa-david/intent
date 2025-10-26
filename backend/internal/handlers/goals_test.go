@@ -26,6 +26,8 @@ func TestGoalsHandlerCreateSuccess(t *testing.T) {
 	payload := map[string]any{
 		"title":            "Improve release readiness",
 		"clarityStatement": "Thursday release keeps slipping due to missing evidence",
+		"guardrails":       []string{"Respect freeze window"},
+		"decisionRights":   []string{"Launch toggles"},
 		"constraints":      []string{"Protect member focus time", " protect member focus time "},
 		"successCriteria":  []string{"Checklist published"},
 	}
@@ -36,7 +38,7 @@ func TestGoalsHandlerCreateSuccess(t *testing.T) {
 	}
 
 	mock.ExpectExec("INSERT INTO goals").
-		WithArgs(sqlmock.AnyArg(), payload["title"], payload["clarityStatement"], `["Protect member focus time"]`, `["Checklist published"]`, sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WithArgs(sqlmock.AnyArg(), payload["title"], payload["clarityStatement"], `["Respect freeze window"]`, `["Launch toggles"]`, `["Protect member focus time"]`, `["Checklist published"]`, sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	req := httptest.NewRequest(http.MethodPost, "/api/goals", bytes.NewReader(body))
@@ -53,6 +55,8 @@ func TestGoalsHandlerCreateSuccess(t *testing.T) {
 		ID               string   `json:"id"`
 		Title            string   `json:"title"`
 		ClarityStatement string   `json:"clarityStatement"`
+		Guardrails       []string `json:"guardrails"`
+		DecisionRights   []string `json:"decisionRights"`
 		Constraints      []string `json:"constraints"`
 		SuccessCriteria  []string `json:"successCriteria"`
 		CreatedAt        string   `json:"createdAt"`
@@ -69,6 +73,14 @@ func TestGoalsHandlerCreateSuccess(t *testing.T) {
 
 	if len(response.Constraints) != 1 || response.Constraints[0] != "Protect member focus time" {
 		t.Fatalf("expected constraints to be normalized")
+	}
+
+	if len(response.Guardrails) != 1 || response.Guardrails[0] != "Respect freeze window" {
+		t.Fatalf("expected guardrails to round-trip")
+	}
+
+	if len(response.DecisionRights) != 1 || response.DecisionRights[0] != "Launch toggles" {
+		t.Fatalf("expected decision rights to round-trip")
 	}
 
 	if len(response.SuccessCriteria) != 1 || response.SuccessCriteria[0] != "Checklist published" {
@@ -123,14 +135,14 @@ func TestGoalsHandlerListSuccess(t *testing.T) {
 	updatedAt := createdAt
 	id := uuid.New()
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(*) FROM goals WHERE (title ILIKE $1 OR clarity_statement ILIKE $2 OR success_criteria::text ILIKE $3)")).
-		WithArgs(pattern, pattern, pattern).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(*) FROM goals WHERE (title ILIKE $1 OR clarity_statement ILIKE $2 OR guardrails::text ILIKE $3 OR decision_rights::text ILIKE $4 OR success_criteria::text ILIKE $5 OR constraints::text ILIKE $6)")).
+		WithArgs(pattern, pattern, pattern, pattern, pattern, pattern).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, title, clarity_statement, constraints, success_criteria, created_at, updated_at FROM goals WHERE (title ILIKE $1 OR clarity_statement ILIKE $2 OR success_criteria::text ILIKE $3) ORDER BY created_at DESC LIMIT $4")).
-		WithArgs(pattern, pattern, pattern, 20).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "title", "clarity_statement", "constraints", "success_criteria", "created_at", "updated_at"}).
-			AddRow(id, "Goal", "Clarity", `["Guardrail"]`, `["Outcome"]`, createdAt, updatedAt))
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, title, clarity_statement, guardrails, decision_rights, constraints, success_criteria, created_at, updated_at FROM goals WHERE (title ILIKE $1 OR clarity_statement ILIKE $2 OR guardrails::text ILIKE $3 OR decision_rights::text ILIKE $4 OR success_criteria::text ILIKE $5 OR constraints::text ILIKE $6) ORDER BY created_at DESC LIMIT $7")).
+		WithArgs(pattern, pattern, pattern, pattern, pattern, pattern, 20).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "title", "clarity_statement", "guardrails", "decision_rights", "constraints", "success_criteria", "created_at", "updated_at"}).
+			AddRow(id, "Goal", "Clarity", `["Guardrail"]`, `["Decide"]`, `["Guardrail"]`, `["Outcome"]`, createdAt, updatedAt))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/goals?q=focus", nil)
 	rr := httptest.NewRecorder()
@@ -180,7 +192,7 @@ func TestGoalsHandlerRetrieveNotFound(t *testing.T) {
 	logger := testLogger(t)
 	id := uuid.New()
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, title, clarity_statement, constraints, success_criteria, created_at, updated_at FROM goals WHERE id = $1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, title, clarity_statement, guardrails, decision_rights, constraints, success_criteria, created_at, updated_at FROM goals WHERE id = $1")).
 		WithArgs(id).
 		WillReturnError(sql.ErrNoRows)
 
@@ -214,6 +226,8 @@ func TestGoalsHandlerUpdateSuccess(t *testing.T) {
 	payload := map[string]any{
 		"title":            "Updated goal",
 		"clarityStatement": "Updated clarity",
+		"guardrails":       []string{"Guardrail"},
+		"decisionRights":   []string{"Decide"},
 		"constraints":      []string{"Guardrail"},
 		"successCriteria":  []string{"Outcome"},
 	}
@@ -226,14 +240,16 @@ func TestGoalsHandlerUpdateSuccess(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta(`UPDATE goals
 SET title = $1,
     clarity_statement = $2,
-    constraints = $3,
-    success_criteria = $4,
-    updated_at = $5
-WHERE id = $6
-RETURNING id, title, clarity_statement, constraints, success_criteria, created_at, updated_at`)).
-		WithArgs(payload["title"], payload["clarityStatement"], `["Guardrail"]`, `["Outcome"]`, sqlmock.AnyArg(), id).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "title", "clarity_statement", "constraints", "success_criteria", "created_at", "updated_at"}).
-			AddRow(id, payload["title"], payload["clarityStatement"], `["Guardrail"]`, `["Outcome"]`, createdAt, updatedAt))
+    guardrails = $3,
+    decision_rights = $4,
+    constraints = $5,
+    success_criteria = $6,
+    updated_at = $7
+WHERE id = $8
+RETURNING id, title, clarity_statement, guardrails, decision_rights, constraints, success_criteria, created_at, updated_at`)).
+		WithArgs(payload["title"], payload["clarityStatement"], `["Guardrail"]`, `["Decide"]`, `["Guardrail"]`, `["Outcome"]`, sqlmock.AnyArg(), id).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "title", "clarity_statement", "guardrails", "decision_rights", "constraints", "success_criteria", "created_at", "updated_at"}).
+			AddRow(id, payload["title"], payload["clarityStatement"], `["Guardrail"]`, `["Decide"]`, `["Guardrail"]`, `["Outcome"]`, createdAt, updatedAt))
 
 	req := httptest.NewRequest(http.MethodPut, "/api/goals/"+id.String(), bytes.NewReader(body))
 	rr := httptest.NewRecorder()

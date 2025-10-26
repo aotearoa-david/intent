@@ -11,6 +11,8 @@ export type GoalResponse = {
   id: string;
   title: string;
   clarityStatement: string;
+  guardrails: string[];
+  decisionRights: string[];
   constraints: string[];
   successCriteria: string[];
   createdAt: string;

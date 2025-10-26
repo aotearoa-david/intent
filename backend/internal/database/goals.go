@@ -17,6 +17,8 @@ type Goal struct {
 	ID               uuid.UUID
 	Title            string
 	ClarityStatement string
+	Guardrails       []string
+	DecisionRights   []string
 	Constraints      []string
 	SuccessCriteria  []string
 	CreatedAt        time.Time
@@ -27,6 +29,8 @@ type Goal struct {
 type GoalInput struct {
 	Title            string
 	ClarityStatement string
+	Guardrails       []string
+	DecisionRights   []string
 	Constraints      []string
 	SuccessCriteria  []string
 }
@@ -50,6 +54,16 @@ func CreateGoal(ctx context.Context, db *sql.DB, input GoalInput) (Goal, error) 
 		return Goal{}, errors.New("database handle is nil")
 	}
 
+	guardrailsJSON, err := json.Marshal(input.Guardrails)
+	if err != nil {
+		return Goal{}, err
+	}
+
+	decisionRightsJSON, err := json.Marshal(input.DecisionRights)
+	if err != nil {
+		return Goal{}, err
+	}
+
 	constraintsJSON, err := json.Marshal(input.Constraints)
 	if err != nil {
 		return Goal{}, err
@@ -64,11 +78,11 @@ func CreateGoal(ctx context.Context, db *sql.DB, input GoalInput) (Goal, error) 
 	id := uuid.New()
 
 	const query = `
-INSERT INTO goals (id, title, clarity_statement, constraints, success_criteria, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO goals (id, title, clarity_statement, guardrails, decision_rights, constraints, success_criteria, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
-	if _, err := db.ExecContext(ctx, query, id, input.Title, input.ClarityStatement, string(constraintsJSON), string(successJSON), now, now); err != nil {
+	if _, err := db.ExecContext(ctx, query, id, input.Title, input.ClarityStatement, string(guardrailsJSON), string(decisionRightsJSON), string(constraintsJSON), string(successJSON), now, now); err != nil {
 		return Goal{}, err
 	}
 
@@ -76,6 +90,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ID:               id,
 		Title:            input.Title,
 		ClarityStatement: input.ClarityStatement,
+		Guardrails:       input.Guardrails,
+		DecisionRights:   input.DecisionRights,
 		Constraints:      input.Constraints,
 		SuccessCriteria:  input.SuccessCriteria,
 		CreatedAt:        now,
@@ -90,13 +106,15 @@ func GetGoal(ctx context.Context, db *sql.DB, id uuid.UUID) (Goal, error) {
 	}
 
 	const query = `
-SELECT id, title, clarity_statement, constraints, success_criteria, created_at, updated_at
+SELECT id, title, clarity_statement, guardrails, decision_rights, constraints, success_criteria, created_at, updated_at
 FROM goals
 WHERE id = $1
 `
 
 	var (
 		goal            Goal
+		guardrailsJSON  []byte
+		decisionJSON    []byte
 		constraintsJSON []byte
 		successCriteria []byte
 	)
@@ -105,6 +123,8 @@ WHERE id = $1
 		&goal.ID,
 		&goal.Title,
 		&goal.ClarityStatement,
+		&guardrailsJSON,
+		&decisionJSON,
 		&constraintsJSON,
 		&successCriteria,
 		&goal.CreatedAt,
@@ -112,6 +132,18 @@ WHERE id = $1
 	)
 	if err != nil {
 		return Goal{}, err
+	}
+
+	if len(guardrailsJSON) > 0 {
+		if err := json.Unmarshal(guardrailsJSON, &goal.Guardrails); err != nil {
+			return Goal{}, err
+		}
+	}
+
+	if len(decisionJSON) > 0 {
+		if err := json.Unmarshal(decisionJSON, &goal.DecisionRights); err != nil {
+			return Goal{}, err
+		}
 	}
 
 	if len(constraintsJSON) > 0 {
@@ -135,6 +167,16 @@ func UpdateGoal(ctx context.Context, db *sql.DB, id uuid.UUID, input GoalInput) 
 		return Goal{}, errors.New("database handle is nil")
 	}
 
+	guardrailsJSON, err := json.Marshal(input.Guardrails)
+	if err != nil {
+		return Goal{}, err
+	}
+
+	decisionJSON, err := json.Marshal(input.DecisionRights)
+	if err != nil {
+		return Goal{}, err
+	}
+
 	constraintsJSON, err := json.Marshal(input.Constraints)
 	if err != nil {
 		return Goal{}, err
@@ -151,23 +193,29 @@ func UpdateGoal(ctx context.Context, db *sql.DB, id uuid.UUID, input GoalInput) 
 UPDATE goals
 SET title = $1,
     clarity_statement = $2,
-    constraints = $3,
-    success_criteria = $4,
-    updated_at = $5
-WHERE id = $6
-RETURNING id, title, clarity_statement, constraints, success_criteria, created_at, updated_at
+    guardrails = $3,
+    decision_rights = $4,
+    constraints = $5,
+    success_criteria = $6,
+    updated_at = $7
+WHERE id = $8
+RETURNING id, title, clarity_statement, guardrails, decision_rights, constraints, success_criteria, created_at, updated_at
 `
 
 	var (
 		goal           Goal
+		rawGuardrails  []byte
+		rawDecision    []byte
 		rawConstraints []byte
 		rawSuccess     []byte
 	)
 
-	err = db.QueryRowContext(ctx, query, input.Title, input.ClarityStatement, string(constraintsJSON), string(successJSON), now, id).Scan(
+	err = db.QueryRowContext(ctx, query, input.Title, input.ClarityStatement, string(guardrailsJSON), string(decisionJSON), string(constraintsJSON), string(successJSON), now, id).Scan(
 		&goal.ID,
 		&goal.Title,
 		&goal.ClarityStatement,
+		&rawGuardrails,
+		&rawDecision,
 		&rawConstraints,
 		&rawSuccess,
 		&goal.CreatedAt,
@@ -175,6 +223,18 @@ RETURNING id, title, clarity_statement, constraints, success_criteria, created_a
 	)
 	if err != nil {
 		return Goal{}, err
+	}
+
+	if len(rawGuardrails) > 0 {
+		if err := json.Unmarshal(rawGuardrails, &goal.Guardrails); err != nil {
+			return Goal{}, err
+		}
+	}
+
+	if len(rawDecision) > 0 {
+		if err := json.Unmarshal(rawDecision, &goal.DecisionRights); err != nil {
+			return Goal{}, err
+		}
 	}
 
 	if len(rawConstraints) > 0 {
@@ -231,9 +291,9 @@ func ListGoals(ctx context.Context, db *sql.DB, filters GoalFilters, pagination 
 
 	if strings.TrimSpace(filters.Query) != "" {
 		pattern := fmt.Sprintf("%%%s%%", filters.Query)
-		conditions = append(conditions, fmt.Sprintf("(title ILIKE $%d OR clarity_statement ILIKE $%d OR success_criteria::text ILIKE $%d)", param, param+1, param+2))
-		args = append(args, pattern, pattern, pattern)
-		param += 3
+		conditions = append(conditions, fmt.Sprintf("(title ILIKE $%d OR clarity_statement ILIKE $%d OR guardrails::text ILIKE $%d OR decision_rights::text ILIKE $%d OR success_criteria::text ILIKE $%d OR constraints::text ILIKE $%d)", param, param+1, param+2, param+3, param+4, param+5))
+		args = append(args, pattern, pattern, pattern, pattern, pattern, pattern)
+		param += 6
 	}
 
 	if filters.CreatedAfter != nil {
@@ -260,7 +320,7 @@ func ListGoals(ctx context.Context, db *sql.DB, filters GoalFilters, pagination 
 		return GoalListResult{}, err
 	}
 
-	listQuery := "SELECT id, title, clarity_statement, constraints, success_criteria, created_at, updated_at FROM goals" + whereClause + " ORDER BY created_at DESC"
+	listQuery := "SELECT id, title, clarity_statement, guardrails, decision_rights, constraints, success_criteria, created_at, updated_at FROM goals" + whereClause + " ORDER BY created_at DESC"
 	listArgs := append([]any{}, args...)
 
 	if pagination.Limit > 0 {
@@ -284,6 +344,8 @@ func ListGoals(ctx context.Context, db *sql.DB, filters GoalFilters, pagination 
 	for rows.Next() {
 		var (
 			goal           Goal
+			rawGuardrails  []byte
+			rawDecision    []byte
 			rawConstraints []byte
 			rawSuccess     []byte
 		)
@@ -292,12 +354,26 @@ func ListGoals(ctx context.Context, db *sql.DB, filters GoalFilters, pagination 
 			&goal.ID,
 			&goal.Title,
 			&goal.ClarityStatement,
+			&rawGuardrails,
+			&rawDecision,
 			&rawConstraints,
 			&rawSuccess,
 			&goal.CreatedAt,
 			&goal.UpdatedAt,
 		); err != nil {
 			return GoalListResult{}, err
+		}
+
+		if len(rawGuardrails) > 0 {
+			if err := json.Unmarshal(rawGuardrails, &goal.Guardrails); err != nil {
+				return GoalListResult{}, err
+			}
+		}
+
+		if len(rawDecision) > 0 {
+			if err := json.Unmarshal(rawDecision, &goal.DecisionRights); err != nil {
+				return GoalListResult{}, err
+			}
 		}
 
 		if len(rawConstraints) > 0 {

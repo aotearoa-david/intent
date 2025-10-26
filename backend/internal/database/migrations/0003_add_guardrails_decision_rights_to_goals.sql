@@ -1,0 +1,3 @@
+ALTER TABLE goals
+    ADD COLUMN IF NOT EXISTS guardrails JSONB NOT NULL DEFAULT '[]'::jsonb,
+    ADD COLUMN IF NOT EXISTS decision_rights JSONB NOT NULL DEFAULT '[]'::jsonb;
