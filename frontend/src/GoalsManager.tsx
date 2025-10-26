@@ -20,6 +20,8 @@ import { formatDateInputValue, formatTimestamp, parseDateInputValue } from './da
 const initialFormState = {
   title: '',
   clarityStatement: '',
+  guardrails: '',
+  decisionRights: '',
   constraints: '',
   successCriteria: '',
 };
@@ -111,6 +113,8 @@ const GoalsManager = () => {
       const payload: GoalPayload = {
         title: formState.title.trim(),
         clarityStatement: formState.clarityStatement.trim(),
+        guardrails: parseListValues(formState.guardrails),
+        decisionRights: parseListValues(formState.decisionRights),
         constraints: parseListValues(formState.constraints),
         successCriteria: parseListValues(formState.successCriteria),
       };
@@ -122,6 +126,8 @@ const GoalsManager = () => {
         setFormState({
           title: response.title,
           clarityStatement: response.clarityStatement,
+          guardrails: formatListValues(response.guardrails),
+          decisionRights: formatListValues(response.decisionRights),
           constraints: formatListValues(response.constraints),
           successCriteria: formatListValues(response.successCriteria),
         });
@@ -154,6 +160,8 @@ const GoalsManager = () => {
     setFormState({
       title: goal.title,
       clarityStatement: goal.clarityStatement,
+      guardrails: formatListValues(goal.guardrails),
+      decisionRights: formatListValues(goal.decisionRights),
       constraints: formatListValues(goal.constraints),
       successCriteria: formatListValues(goal.successCriteria),
     });
@@ -230,7 +238,8 @@ const GoalsManager = () => {
         <header>
           <h2>{formMode === 'update' ? 'Update goal' : 'Define a chapter goal'}</h2>
           <p>
-            Capture the clarity statement, constraints, and success criteria that guide intents for upcoming chapter sessions.
+            Capture the clarity statement, guardrails, decision rights, constraints, and success criteria that guide intents for
+            upcoming chapter sessions.
           </p>
         </header>
 
@@ -252,6 +261,24 @@ const GoalsManager = () => {
               onChange={updateField('clarityStatement')}
               placeholder="Why this goal matters, the scope, and key outcomes"
               required
+            />
+          </label>
+
+          <label>
+            <span>Guardrails (one per line or comma separated)</span>
+            <textarea
+              value={formState.guardrails}
+              onChange={updateField('guardrails')}
+              placeholder="Protect member focus time\nShare updates async"
+            />
+          </label>
+
+          <label>
+            <span>Decision rights (one per line or comma separated)</span>
+            <textarea
+              value={formState.decisionRights}
+              onChange={updateField('decisionRights')}
+              placeholder="Teams may ship with feature flags\nEngineers can pick tooling"
             />
           </label>
 
@@ -382,6 +409,8 @@ const GoalsManager = () => {
                 <tr>
                   <th>Title</th>
                   <th>Clarity statement</th>
+                  <th>Guardrails</th>
+                  <th>Decision rights</th>
                   <th>Constraints</th>
                   <th>Success criteria</th>
                   <th>Created</th>
@@ -396,6 +425,32 @@ const GoalsManager = () => {
                       <strong>{goal.title}</strong>
                     </td>
                     <td>{goal.clarityStatement}</td>
+                    <td>
+                      {goal.guardrails.length === 0 ? (
+                        <span className="intent-table-empty">—</span>
+                      ) : (
+                        <div className="intent-table-collaborators">
+                          {goal.guardrails.map((guardrail) => (
+                            <span key={guardrail} className="intent-collaborator-badge">
+                              {guardrail}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      {goal.decisionRights.length === 0 ? (
+                        <span className="intent-table-empty">—</span>
+                      ) : (
+                        <div className="intent-table-collaborators">
+                          {goal.decisionRights.map((decisionRight) => (
+                            <span key={decisionRight} className="intent-collaborator-badge">
+                              {decisionRight}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                     <td>
                       {goal.constraints.length === 0 ? (
                         <span className="intent-table-empty">—</span>

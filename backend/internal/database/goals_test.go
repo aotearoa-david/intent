@@ -21,12 +21,14 @@ func TestCreateGoalSuccess(t *testing.T) {
 	input := GoalInput{
 		Title:            "Boost release confidence",
 		ClarityStatement: "Ensure Thursday release is risk-free",
+		Guardrails:       []string{"Respect freeze"},
+		DecisionRights:   []string{"Feature toggles"},
 		Constraints:      []string{"Keep production stable"},
 		SuccessCriteria:  []string{"Zero Sev-1 incidents"},
 	}
 
 	mock.ExpectExec("INSERT INTO goals").
-		WithArgs(sqlmock.AnyArg(), input.Title, input.ClarityStatement, `["Keep production stable"]`, `["Zero Sev-1 incidents"]`, sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WithArgs(sqlmock.AnyArg(), input.Title, input.ClarityStatement, `["Respect freeze"]`, `["Feature toggles"]`, `["Keep production stable"]`, `["Zero Sev-1 incidents"]`, sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	goal, err := CreateGoal(context.Background(), db, input)
@@ -62,10 +64,10 @@ func TestGetGoalSuccess(t *testing.T) {
 	createdAt := time.Now().UTC()
 	updatedAt := createdAt.Add(time.Hour)
 
-	rows := sqlmock.NewRows([]string{"id", "title", "clarity_statement", "constraints", "success_criteria", "created_at", "updated_at"}).
-		AddRow(id, "Goal", "Clarity", `["Guardrail"]`, `["Outcome"]`, createdAt, updatedAt)
+	rows := sqlmock.NewRows([]string{"id", "title", "clarity_statement", "guardrails", "decision_rights", "constraints", "success_criteria", "created_at", "updated_at"}).
+		AddRow(id, "Goal", "Clarity", `["Guardrail"]`, `["Delegate"]`, `["Guardrail"]`, `["Outcome"]`, createdAt, updatedAt)
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, title, clarity_statement, constraints, success_criteria, created_at, updated_at FROM goals WHERE id = $1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, title, clarity_statement, guardrails, decision_rights, constraints, success_criteria, created_at, updated_at FROM goals WHERE id = $1")).
 		WithArgs(id).
 		WillReturnRows(rows)
 
@@ -76,6 +78,14 @@ func TestGetGoalSuccess(t *testing.T) {
 
 	if goal.ID != id {
 		t.Fatalf("expected id %s got %s", id, goal.ID)
+	}
+
+	if len(goal.Guardrails) != 1 || goal.Guardrails[0] != "Guardrail" {
+		t.Fatalf("expected guardrails to be unmarshalled")
+	}
+
+	if len(goal.DecisionRights) != 1 || goal.DecisionRights[0] != "Delegate" {
+		t.Fatalf("expected decision rights to be unmarshalled")
 	}
 
 	if len(goal.Constraints) != 1 || goal.Constraints[0] != "Guardrail" {
@@ -100,7 +110,7 @@ func TestGetGoalNotFound(t *testing.T) {
 
 	id := uuid.New()
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, title, clarity_statement, constraints, success_criteria, created_at, updated_at FROM goals WHERE id = $1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, title, clarity_statement, guardrails, decision_rights, constraints, success_criteria, created_at, updated_at FROM goals WHERE id = $1")).
 		WithArgs(id).
 		WillReturnError(sql.ErrNoRows)
 
@@ -127,6 +137,8 @@ func TestUpdateGoalSuccess(t *testing.T) {
 	input := GoalInput{
 		Title:            "Refine onboarding",
 		ClarityStatement: "Make onboarding consistent",
+		Guardrails:       []string{"Timebox experiments"},
+		DecisionRights:   []string{"Empower pairing"},
 		Constraints:      []string{"Stay within budget"},
 		SuccessCriteria:  []string{"Handbook updated"},
 	}
@@ -134,14 +146,16 @@ func TestUpdateGoalSuccess(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta(`UPDATE goals
 SET title = $1,
     clarity_statement = $2,
-    constraints = $3,
-    success_criteria = $4,
-    updated_at = $5
-WHERE id = $6
-RETURNING id, title, clarity_statement, constraints, success_criteria, created_at, updated_at`)).
-		WithArgs(input.Title, input.ClarityStatement, `["Stay within budget"]`, `["Handbook updated"]`, sqlmock.AnyArg(), id).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "title", "clarity_statement", "constraints", "success_criteria", "created_at", "updated_at"}).
-			AddRow(id, input.Title, input.ClarityStatement, `["Stay within budget"]`, `["Handbook updated"]`, createdAt, updatedAt))
+    guardrails = $3,
+    decision_rights = $4,
+    constraints = $5,
+    success_criteria = $6,
+    updated_at = $7
+WHERE id = $8
+RETURNING id, title, clarity_statement, guardrails, decision_rights, constraints, success_criteria, created_at, updated_at`)).
+		WithArgs(input.Title, input.ClarityStatement, `["Timebox experiments"]`, `["Empower pairing"]`, `["Stay within budget"]`, `["Handbook updated"]`, sqlmock.AnyArg(), id).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "title", "clarity_statement", "guardrails", "decision_rights", "constraints", "success_criteria", "created_at", "updated_at"}).
+			AddRow(id, input.Title, input.ClarityStatement, `["Timebox experiments"]`, `["Empower pairing"]`, `["Stay within budget"]`, `["Handbook updated"]`, createdAt, updatedAt))
 
 	goal, err := UpdateGoal(context.Background(), db, id, input)
 	if err != nil {
@@ -217,14 +231,14 @@ func TestListGoalsWithFilters(t *testing.T) {
 	updatedAt := now
 	pattern := "%Clarity%"
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(*) FROM goals WHERE (title ILIKE $1 OR clarity_statement ILIKE $2 OR success_criteria::text ILIKE $3) AND created_at >= $4")).
-		WithArgs(pattern, pattern, pattern, now).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(*) FROM goals WHERE (title ILIKE $1 OR clarity_statement ILIKE $2 OR guardrails::text ILIKE $3 OR decision_rights::text ILIKE $4 OR success_criteria::text ILIKE $5 OR constraints::text ILIKE $6) AND created_at >= $7")).
+		WithArgs(pattern, pattern, pattern, pattern, pattern, pattern, now).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, title, clarity_statement, constraints, success_criteria, created_at, updated_at FROM goals WHERE (title ILIKE $1 OR clarity_statement ILIKE $2 OR success_criteria::text ILIKE $3) AND created_at >= $4 ORDER BY created_at DESC LIMIT $5 OFFSET $6")).
-		WithArgs(pattern, pattern, pattern, now, pagination.Limit, pagination.Offset).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "title", "clarity_statement", "constraints", "success_criteria", "created_at", "updated_at"}).
-			AddRow(id, "Goal", "Clarity", `["Guardrail"]`, `["Outcome"]`, createdAt, updatedAt))
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, title, clarity_statement, guardrails, decision_rights, constraints, success_criteria, created_at, updated_at FROM goals WHERE (title ILIKE $1 OR clarity_statement ILIKE $2 OR guardrails::text ILIKE $3 OR decision_rights::text ILIKE $4 OR success_criteria::text ILIKE $5 OR constraints::text ILIKE $6) AND created_at >= $7 ORDER BY created_at DESC LIMIT $8 OFFSET $9")).
+		WithArgs(pattern, pattern, pattern, pattern, pattern, pattern, now, pagination.Limit, pagination.Offset).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "title", "clarity_statement", "guardrails", "decision_rights", "constraints", "success_criteria", "created_at", "updated_at"}).
+			AddRow(id, "Goal", "Clarity", `["Guardrail"]`, `["Decide"]`, `["Constraint"]`, `["Outcome"]`, createdAt, updatedAt))
 
 	result, err := ListGoals(context.Background(), db, filters, pagination)
 	if err != nil {

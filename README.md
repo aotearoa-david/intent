@@ -79,10 +79,10 @@ go test ./...
 | REST API           | `/api/intents/{id}`    | GET    | Retrieves a single intent by identifier. |
 | REST API           | `/api/intents/{id}`    | PUT    | Replaces an existing intent. |
 | REST API           | `/api/intents/{id}`    | DELETE | Deletes an intent. |
-| REST API           | `/api/goals`           | POST   | Creates a goal with clarity statement, constraints, and success criteria. |
-| REST API           | `/api/goals`           | GET    | Lists goals with pagination plus text and created-at filters. |
-| REST API           | `/api/goals/{id}`      | GET    | Retrieves a single goal by identifier. |
-| REST API           | `/api/goals/{id}`      | PUT    | Replaces an existing goal. |
+| REST API           | `/api/goals`           | POST   | Creates a goal with clarity statement, guardrails, decision rights, constraints, and success criteria. |
+| REST API           | `/api/goals`           | GET    | Lists goals with pagination plus text and created-at filters, returning guardrails and decision rights. |
+| REST API           | `/api/goals/{id}`      | GET    | Retrieves a single goal by identifier, including guardrails and decision rights. |
+| REST API           | `/api/goals/{id}`      | PUT    | Replaces an existing goal and its guardrails, decision rights, constraints, and success criteria. |
 | REST API           | `/api/goals/{id}`      | DELETE | Deletes a goal. |
 | Service health     | `/healthz`             | GET    | Plain text `ok` to integrate with probes. |
 | Static web content | `/`                    | GET    | Serves the built React application from `frontend/dist`. |
@@ -105,6 +105,8 @@ CREATE TABLE IF NOT EXISTS goals (
     id UUID PRIMARY KEY,
     title TEXT NOT NULL,
     clarity_statement TEXT NOT NULL,
+    guardrails JSONB NOT NULL DEFAULT '[]'::jsonb,
+    decision_rights JSONB NOT NULL DEFAULT '[]'::jsonb,
     constraints JSONB NOT NULL DEFAULT '[]'::jsonb,
     success_criteria JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ NOT NULL,
@@ -151,7 +153,7 @@ C4Container
     Container_Boundary(c1, "Intent Platform") {
         Container(api, "Go Backend", "Go 1.22", "Serves HTTP, handles logging, and provides CRUDL APIs for intents and goals backed by Postgres")
         Container(frontend, "React SPA", "Vite + React 18", "Fetches API data, renders intents and goals UI, and submits forms")
-        ContainerDb(db, "Postgres", "Docker Postgres 16", "Stores intents (statement, context, expected outcome, collaborators) and goals (clarity, constraints, success criteria)")
+        ContainerDb(db, "Postgres", "Docker Postgres 16", "Stores intents (statement, context, expected outcome, collaborators) and goals (clarity, guardrails, decision rights, constraints, success criteria)")
     }
     Container_Ext(dev, "Developer Workstation", "Node + Go toolchains")
 

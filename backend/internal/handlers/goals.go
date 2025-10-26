@@ -16,6 +16,8 @@ import (
 type createGoalRequest struct {
 	Title            string   `json:"title"`
 	ClarityStatement string   `json:"clarityStatement"`
+	Guardrails       []string `json:"guardrails"`
+	DecisionRights   []string `json:"decisionRights"`
 	Constraints      []string `json:"constraints"`
 	SuccessCriteria  []string `json:"successCriteria"`
 }
@@ -24,6 +26,8 @@ type goalResponse struct {
 	ID               string   `json:"id"`
 	Title            string   `json:"title"`
 	ClarityStatement string   `json:"clarityStatement"`
+	Guardrails       []string `json:"guardrails"`
+	DecisionRights   []string `json:"decisionRights"`
 	Constraints      []string `json:"constraints"`
 	SuccessCriteria  []string `json:"successCriteria"`
 	CreatedAt        string   `json:"createdAt"`
@@ -124,12 +128,16 @@ func (h *goalsHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	cleanedGuardrails := normalizeGoalValues(payload.Guardrails)
+	cleanedDecisionRights := normalizeGoalValues(payload.DecisionRights)
 	cleanedConstraints := normalizeGoalValues(payload.Constraints)
 	cleanedSuccess := normalizeGoalValues(payload.SuccessCriteria)
 
 	record, err := database.CreateGoal(ctx, h.db, database.GoalInput{
 		Title:            strings.TrimSpace(payload.Title),
 		ClarityStatement: strings.TrimSpace(payload.ClarityStatement),
+		Guardrails:       cleanedGuardrails,
+		DecisionRights:   cleanedDecisionRights,
 		Constraints:      cleanedConstraints,
 		SuccessCriteria:  cleanedSuccess,
 	})
@@ -269,12 +277,16 @@ func (h *goalsHandler) handleUpdate(w http.ResponseWriter, r *http.Request, id s
 		return
 	}
 
+	cleanedGuardrails := normalizeGoalValues(payload.Guardrails)
+	cleanedDecisionRights := normalizeGoalValues(payload.DecisionRights)
 	cleanedConstraints := normalizeGoalValues(payload.Constraints)
 	cleanedSuccess := normalizeGoalValues(payload.SuccessCriteria)
 
 	record, err := database.UpdateGoal(ctx, h.db, uuidValue, database.GoalInput{
 		Title:            strings.TrimSpace(payload.Title),
 		ClarityStatement: strings.TrimSpace(payload.ClarityStatement),
+		Guardrails:       cleanedGuardrails,
+		DecisionRights:   cleanedDecisionRights,
 		Constraints:      cleanedConstraints,
 		SuccessCriteria:  cleanedSuccess,
 	})
@@ -326,6 +338,8 @@ func toGoalResponse(goal database.Goal) goalResponse {
 		ID:               goal.ID.String(),
 		Title:            goal.Title,
 		ClarityStatement: goal.ClarityStatement,
+		Guardrails:       goal.Guardrails,
+		DecisionRights:   goal.DecisionRights,
 		Constraints:      goal.Constraints,
 		SuccessCriteria:  goal.SuccessCriteria,
 		CreatedAt:        goal.CreatedAt.Format(time.RFC3339),
